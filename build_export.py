@@ -171,7 +171,7 @@ def build(out_dir, nickname=None):
             cover = '<div class="nophoto">🍺</div>'
         sub = " · ".join(x for x in [brw.get("name_en") or brw.get("name_cn"),
                                      (b.get("style") or {}).get("name"),
-                                     f'{b["abv"]}%' if b.get("abv")] if x)
+                                     f'{b["abv"]}%' if b.get("abv") else None] if x)
         sub_cn = (f'<div class="sub cn">{html.escape(b["name_cn"] or "")}</div>'
                   if b.get("name_en") and b.get("name_cn") else "")
         venue = f' · 📍 {html.escape(i["bar"]["name"])}' if i["bar"] else ""
