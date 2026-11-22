@@ -18,8 +18,15 @@ Produces `output/` with:
 | `<nickname>_checkins.csv` | Spreadsheet-friendly, opens directly in Excel (UTF-8 BOM) |
 | `checkins_beer.json` / `checkins_bar.json` | Raw API data (beer ratings & bar check-ins) |
 | `beer_details.json` / `breweries.json` | Beer & brewery details (Chinese **and English** names, ABV/IBU, style, country, descriptions) |
-| `images/` | All original-resolution photos: your check-in photos + beer label art |
+| `images/checkins/` | Your check-in photos at original resolution |
+| `images/beers_lg/` | Beer label art at original resolution (`-lg2` PNG, falls back to `-lg` webp) |
+| `images/beers/` | Beer label square thumbnails |
+| `images/avatars/` · `images/bars/` · `images/profile/` | Comment-author avatars, bar logos, your avatar & profile background |
 | `run_log.txt` | What the run did |
+
+> **Privacy**: the `output/` directory contains your personal history (and
+> `user_profile.json` may include the phone number bound to your account).
+> Keep it local; the `.gitignore` of this repo already excludes it.
 
 ## Why this works
 
@@ -64,7 +71,7 @@ reference a bar.
 
 ## Install & run
 
-Python 3.9+ required.
+Python 3.10+ required.
 
 ```bash
 pip install -r requirements.txt

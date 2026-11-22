@@ -78,23 +78,47 @@ def step_enrich(client, beer_checkins, out):
     return details, breweries
 
 
-def step_images(client, beer_checkins, bar_checkins, details, out):
+def step_images(client, beer_checkins, bar_checkins, details, profile, out):
     img_root = os.path.join(out, "images")
     tasks = {}  # url -> relative path
 
     def add(url, rel):
-        tasks.setdefault(url, rel)
+        if url:
+            tasks.setdefault(url, rel)
 
     for c in beer_checkins + bar_checkins:
+        # check-in photos
         for i, im in enumerate(c.get("images") or []):
             add(image_url(im.split("|")[0]), f"checkins/{c['oid']}_{i}.jpg")
+        # avatars of comment authors
+        author = c.get("author") or {}
+        if author.get("avatar"):
+            add(image_url(author["avatar"].split("|")[0]),
+                f"avatars/{author.get('oid', 'unknown')}.jpg")
+        # bar logo of bar check-ins
+        bar = c.get("bar") or {}
+        if bar.get("logo"):
+            add(image_url(bar["logo"]), f"bars/{bar.get('oid', 'unknown')}.jpg")
+        # beer thumbs straight from the check-in data (works with --skip-enrich)
+        b = c.get("beer") or {}
+        if b.get("mainPic"):
+            add(beer_thumb_url(b["mainPic"]), f"beers/{b['oid']}.jpg")
+
+    # beer originals at native resolution + thumbs from the details crawl
     for oid, d in (details or {}).items():
         mp = (d or {}).get("mainPic")
         if mp:
             add(beer_large_url(mp), f"beers_lg/{oid}.png")
             add(beer_thumb_url(mp), f"beers/{oid}.jpg")
 
-    for sub in ("checkins", "beers", "beers_lg"):
+    # profile avatar / background
+    if profile.get("avatar"):
+        add(image_url(profile["avatar"].split("|")[0]), "profile/avatar.jpg")
+    if profile.get("background"):
+        add(image_url(profile["background"].split("|")[0]),
+            "profile/background.jpg")
+
+    for sub in ("checkins", "beers", "beers_lg", "avatars", "bars", "profile"):
         os.makedirs(os.path.join(img_root, sub), exist_ok=True)
 
     todo = [(u, r) for u, r in tasks.items()
@@ -102,9 +126,8 @@ def step_images(client, beer_checkins, bar_checkins, details, out):
     log(f"downloading {len(todo)} images ...")
     fails = []
 
-    def dl(item):
-        url, rel = item
-        path = os.path.join(img_root, rel)
+    def fetch(url, path):
+        last = None
         for attempt in range(3):
             try:
                 r = client.session.get(url, timeout=30, verify=False,
@@ -114,9 +137,19 @@ def step_images(client, beer_checkins, bar_checkins, details, out):
                     with open(path, "wb") as f:
                         f.write(r.content)
                     return None
-            except Exception:  # noqa: BLE001
+                last = f"HTTP {r.status_code}"
+            except Exception as e:  # noqa: BLE001
+                last = str(e)
                 time.sleep(1 + attempt)
-        return url
+        return last
+
+    def dl(item):
+        url, rel = item
+        path = os.path.join(img_root, rel)
+        err = fetch(url, path)
+        if err and "-lg2" in url:  # original PNG missing -> same-size webp
+            err = fetch(url.replace("-lg2", "-lg"), path)
+        return url if err else None
 
     with ThreadPoolExecutor(max_workers=6) as ex:
         for n, res in enumerate(ex.map(dl, todo), 1):
@@ -159,7 +192,7 @@ def main():
         details, breweries = step_enrich(client, beer, args.out)
 
     if not args.skip_images:
-        step_images(client, beer, bar, details, args.out)
+        step_images(client, beer, bar, details, profile, args.out)
 
     # build final deliverables with the separate builder
     import build_export

@@ -100,7 +100,8 @@ def build(out_dir, nickname=None):
             "timestamp": c["createTime"],
             "beer": beer_block(c.get("beer")) if kind == "beer" else None,
             "bar": {"id": (c.get("bar") or {}).get("oid"),
-                    "name": (c.get("bar") or {}).get("name")}
+                    "name": (c.get("bar") or {}).get("name"),
+                    "logo_file": _exists(img_root, f"bars/{(c.get('bar') or {}).get('oid')}.jpg")}
                  if (c.get("bar") or {}).get("oid") else None,
             "ratings": ratings,
             "stars": _stars(c.get("rating")),
@@ -126,7 +127,13 @@ def build(out_dir, nickname=None):
         "unique_beers": len({i["beer"]["id"] for i in items if i["beer"]}),
     }
     doc = {"user": {"id": prof.get("oid"), "nickname": prof.get("nickname"),
-                    "signature": prof.get("signature")},
+                    "signature": prof.get("signature"),
+                    # own avatar may be stored under avatars/{uid}.jpg because
+                    # check-in author avatars register that path first
+                    "avatar_file": (_exists(img_root, "profile/avatar.jpg")
+                                    or _exists(img_root,
+                                               f"avatars/{prof.get('oid')}.jpg")),
+                    "background_file": _exists(img_root, "profile/background.jpg")},
            "stats": stats, "checkins": items}
     with open(os.path.join(out_dir, f"{nickname}_checkins_full.json"), "w",
               encoding="utf-8") as f:
@@ -167,6 +174,8 @@ def build(out_dir, nickname=None):
             cover = f'<img src="images/{photos[0]}" loading="lazy" alt="">'
         elif b.get("pic_large"):
             cover = f'<img src="images/{b["pic_large"]}" loading="lazy" alt="">'
+        elif (i["bar"] or {}).get("logo_file"):
+            cover = f'<img src="images/{i["bar"]["logo_file"]}" loading="lazy" alt="">'
         else:
             cover = '<div class="nophoto">🍺</div>'
         sub = " · ".join(x for x in [brw.get("name_en") or brw.get("name_cn"),

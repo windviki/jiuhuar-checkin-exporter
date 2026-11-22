@@ -29,6 +29,11 @@ from base64 import b64decode
 from curl_cffi import requests
 from Crypto.Cipher import AES
 
+# NOTE: keep the plain curl_cffi Session below. A browser-impersonated session
+# (impersonate="chrome") changes the TLS/HTTP2 fingerprint and the WAF then
+# answers with XML instead of JSON, breaking _decrypt. Plain requests +
+# app-shaped headers is what the real app looks like.
+
 API_BASE = "https://napi.jiuhuar.com/api/"
 FILE_HOST = "https://file1.jiuhuar.com"
 S1_HOST = "https://s1.jiuhuar.com"
