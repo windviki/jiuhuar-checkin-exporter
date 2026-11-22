@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Core client for the (now read-only) jiuhuar beer app API.
 
-Reverse-engineered facts this client relies on (see README.md):
+Protocol facts this client relies on, recovered so users can rescue their own
+data before the service disappears (see README.md):
 
 * API base:  https://napi.jiuhuar.com/api/
 * The server's TLS certificate expired in 2020 but the service still serves
@@ -59,7 +60,8 @@ def beer_large_url(main_pic: str) -> str:
 
 
 class JiuhuarClient:
-    def __init__(self, udid: str | None = None, client_version: str = "5.8.8"):
+    def __init__(self, udid: str | None = None, token: str | None = None,
+                 client_version: str = "5.8.8"):
         self.udid = udid or random_udid()
         self.key = self.udid.encode()[:16].ljust(16, b"0")
         self.session = requests.Session()
@@ -68,7 +70,7 @@ class JiuhuarClient:
             "platform": "Android",
             "model": "Pixel 4",
             "clientVersion": client_version,
-            "x-auth-token": "",
+            "x-auth-token": token or "",
             "udid": self.udid,
             "language": "zh",
             "user-agent": "okhttp/3.12.0",
@@ -159,3 +161,36 @@ class JiuhuarClient:
         """Returns the inner 'bar' object of GET bar/{id}."""
         d = self.get(f"bar/{bar_id}") or {}
         return d.get("bar") or {}
+
+    # -- social graph --------------------------------------------------------
+
+    def follow_counts(self, uid: str) -> dict:
+        """Public: {'follower': N, 'following': M}."""
+        return self.get("follow/followInfo", {"uid": uid}) or {}
+
+    def _follow_page(self, path: str, uid: str, last_ts: int) -> list:
+        return self.get(path, {"uid": uid, "lastTimestamp": last_ts}) or []
+
+    def _follow_all(self, path: str, uid: str, delay: float = 0.3) -> list:
+        """Requires a valid x-auth-token (any logged-in account)."""
+        items, seen, last_ts = [], set(), LONG_MAX
+        while True:
+            batch = self._follow_page(path, uid, last_ts)
+            if not isinstance(batch, list) or not batch:
+                break
+            for u in batch:
+                if u.get("oid") and u["oid"] not in seen:
+                    seen.add(u["oid"])
+                    items.append(u)
+            times = [u.get("timestamp") for u in batch if u.get("timestamp")]
+            if len(batch) < 10 or not times:
+                break
+            last_ts = min(times)
+            time.sleep(delay)
+        return items
+
+    def followers(self, uid: str) -> list:
+        return self._follow_all("follow/user/follower", uid)
+
+    def following(self, uid: str) -> list:
+        return self._follow_all("follow/user/following", uid)

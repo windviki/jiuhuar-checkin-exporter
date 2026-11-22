@@ -1,5 +1,8 @@
 # jiuhuar-checkin-exporter 🍺
 
+> 酒花儿停运数据抢救工具 — rescue **your own** check-in history before the
+> servers go dark.
+
 Export **your own** complete check-in history from 酒花儿 (Jiuhuar, the Chinese
 craft-beer app): ratings, comments, photos, beer/brewery info (including
 English names) — even though the app has stopped operating and login no longer
@@ -8,6 +11,8 @@ works.
 ```
 python main.py --nickname YOUR_NICKNAME
 ```
+
+![export gallery](docs/gallery-screenshot.png)
 
 Produces `output/` with:
 
@@ -22,6 +27,8 @@ Produces `output/` with:
 | `images/beers_lg/` | Beer label art at original resolution (`-lg2` PNG, falls back to `-lg` webp) |
 | `images/beers/` | Beer label square thumbnails |
 | `images/avatars/` · `images/bars/` · `images/profile/` | Comment-author avatars, bar logos, your avatar & profile background |
+| `follow_info.json` | Your follower/following **counts** (public) |
+| `followers.json` / `following.json` | Full name lists with follow dates — only with `--token` (any logged-in account) |
 | `run_log.txt` | What the run did |
 
 > **Privacy**: the `output/` directory contains your personal history (and
@@ -34,7 +41,8 @@ The app ended user-side operation (login is dead), but the backend still
 serves **public, unauthenticated** data — and every user profile with its full
 check-in list is public. So exporting your own history needs no credentials.
 
-Key facts found by reverse engineering the Android client (v5.8.8):
+Key protocol facts, recovered from the last Android client (v5.8.8) so that
+user data can be rescued before the servers go dark:
 
 * API base `https://napi.jiuhuar.com/api/` — TLS certificate expired in 2020,
   verification must be disabled (`verify=False`).
@@ -55,6 +63,8 @@ Key facts found by reverse engineering the Android client (v5.8.8):
 | `GET beer/v3/{id}` | beer details, `fullName` = `中文|-|English` |
 | `GET beer/brewery/{id}` | brewery details incl. English name |
 | `GET bar/{id}` | bar details (city, address, opening hours, rating, photos) |
+| `GET follow/followInfo?uid=` | follower/following counts (public) |
+| `GET follow/user/follower\|following?uid=&lastTimestamp=` | follow lists (needs `x-auth-token`) |
 
   Lists page by `lastTime` (unix **seconds**): first page `Long.MAX_VALUE`,
   then the last item's `createTime`; page size 10, a short page ends the walk.
@@ -80,6 +90,7 @@ python main.py --nickname YOUR_NICKNAME          # everything, ~15-40 min
 python main.py --uid 5xxxxxxxxxxxxxxxxxxxxxx     # if you know your uid
 python main.py --nickname X --skip-enrich         # skip beer/brewery details
 python main.py --nickname X --skip-images         # skip photo downloads
+python main.py --nickname X --token <auth-token>  # adds follower/following name lists
 python build_export.py ./output                   # rebuild JSON/CSV/HTML only
 ```
 

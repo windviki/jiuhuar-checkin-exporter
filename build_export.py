@@ -144,8 +144,23 @@ def build(out_dir, nickname=None):
         "with_comment": sum(1 for i in items if i["content"]),
         "unique_beers": len({i["beer"]["id"] for i in items if i["beer"]}),
     }
+    follow_info = load("follow_info.json", {})
+    followers_raw = load("followers.json", [])
+    following_raw = load("following.json", [])
+
+    def _peeps(rows):
+        return [{"id": u.get("oid"), "nickname": u.get("nickname"),
+                 "signature": u.get("signature"),
+                 "followed_at": datetime.fromtimestamp(u["timestamp"]).strftime(
+                     "%Y-%m-%d %H:%M") if u.get("timestamp") else None}
+                for u in rows if u.get("oid")]
+
     doc = {"user": {"id": prof.get("oid"), "nickname": prof.get("nickname"),
                     "signature": prof.get("signature"),
+                    "followers_count": follow_info.get("follower"),
+                    "following_count": follow_info.get("following"),
+                    "followers": _peeps(followers_raw) or None,
+                    "following": _peeps(following_raw) or None,
                     # own avatar may be stored under avatars/{uid}.jpg because
                     # check-in author avatars register that path first
                     "avatar_file": (_exists(img_root, "profile/avatar.jpg")

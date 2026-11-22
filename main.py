@@ -36,6 +36,18 @@ def out_json(path, data):
 def step_crawl(client, uid, out):
     cnt = client.user_comment_cnt(uid)
     log(f"server-side counts: {json.dumps(cnt, ensure_ascii=False)}")
+    fc = client.follow_counts(uid)
+    log(f"social: {json.dumps(fc, ensure_ascii=False)} followers/following")
+    out_json(os.path.join(out, "follow_info.json"), fc)
+    if client.headers.get("x-auth-token"):
+        try:
+            fol = client.followers(uid)
+            fng = client.following(uid)
+            log(f"follower list: {len(fol)}, following list: {len(fng)}")
+            out_json(os.path.join(out, "followers.json"), fol)
+            out_json(os.path.join(out, "following.json"), fng)
+        except Exception as e:  # noqa: BLE001
+            log(f"follow lists unavailable (token?): {e}")
     beer = client.beer_checkins(uid)
     bar = client.bar_checkins(uid)
     log(f"crawled {len(beer)} beer check-ins + {len(bar)} bar check-ins "
@@ -188,6 +200,9 @@ def main():
     ap.add_argument("--nickname", help="your nick name on jiuhuar")
     ap.add_argument("--uid", help="your user id (overrides nickname)")
     ap.add_argument("--out", default="./output", help="output directory")
+    ap.add_argument("--token", default=os.environ.get("JIUHUAR_TOKEN"),
+                    help="auth token of any logged-in account; enables "
+                         "follower/following NAME lists (counts work without)")
     ap.add_argument("--skip-enrich", action="store_true",
                     help="skip beer/brewery detail crawl")
     ap.add_argument("--skip-images", action="store_true", help="skip image download")
@@ -197,7 +212,7 @@ def main():
         ap.error("need --nickname or --uid")
 
     os.makedirs(args.out, exist_ok=True)
-    client = JiuhuarClient()
+    client = JiuhuarClient(token=args.token)
     log(f"udid (also the AES key): {client.udid}")
 
     uid = args.uid or client.user_id(args.nickname)
