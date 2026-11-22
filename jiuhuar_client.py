@@ -46,6 +46,46 @@ def random_udid(length: int = 16) -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
+def try_login(username: str, password: str) -> str:
+    """Exchange account+password for an auth token.
+
+    Returns the token string on success; raises RuntimeError with a readable
+    message otherwise. The password is used only for this one request.
+    """
+    udid = random_udid()
+    headers = {
+        "content-type": "application/json;charset=UTF-8",
+        "platform": "Android", "model": "Pixel 4", "clientVersion": "5.8.8",
+        "x-auth-token": "", "udid": udid, "language": "zh",
+        "user-agent": "okhttp/3.12.0",
+    }
+    r = requests.post(API_BASE + "signin",
+                      json={"username": username, "password": password},
+                      headers=headers, verify=False, timeout=20)
+    if r.status_code != 200:
+        raise RuntimeError(f"auth backend unreachable (HTTP {r.status_code})")
+    try:
+        body = r.json()
+    except Exception:  # noqa: BLE001
+        raise RuntimeError(f"unexpected response: {r.text[:120]}") from None
+    if body.get("code") != 0:
+        hints = {"40004": "wrong username/password", "429": "rate limited, retry later"}
+        raise RuntimeError("login rejected, code=%s msg=%r %s" % (
+            body.get("code"), body.get("msg"), hints.get(str(body.get("code")), "")))
+    data = body.get("data")
+    try:
+        if body.get("crypted") and isinstance(data, str):
+            key = udid.encode()[:16].ljust(16, b"0")
+            pt = AES.new(key, AES.MODE_ECB).decrypt(b64decode(data))
+            data = json.loads(pt[:-pt[-1]].decode("utf-8"))
+        token = (data or {}).get("token")
+    except Exception as e:  # noqa: BLE001
+        raise RuntimeError(f"could not decrypt login response: {e}") from None
+    if not token:
+        raise RuntimeError("login answered but contained no token")
+    return token
+
+
 def image_url(uuid: str) -> str:
     """Original-resolution URL for a user-content image uuid."""
     return f"{FILE_HOST}/{uuid}?imageMogr2/auto-orient"

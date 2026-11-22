@@ -213,9 +213,11 @@ def main():
     ap.add_argument("--nickname", help="your nick name on jiuhuar")
     ap.add_argument("--uid", help="your user id (overrides nickname)")
     ap.add_argument("--out", default="./output", help="output directory")
+    ap.add_argument("--login", action="store_true",
+                    help="prompt for phone+password to fetch follower/"
+                         "following name lists (token is saved to token.txt)")
     ap.add_argument("--token", default=os.environ.get("JIUHUAR_TOKEN"),
-                    help="auth token of any logged-in account; enables "
-                         "follower/following NAME lists (counts work without)")
+                    help="use an existing auth token instead of --login")
     ap.add_argument("--skip-enrich", action="store_true",
                     help="skip beer/brewery detail crawl")
     ap.add_argument("--skip-images", action="store_true", help="skip image download")
@@ -225,7 +227,23 @@ def main():
         ap.error("need --nickname or --uid")
 
     os.makedirs(args.out, exist_ok=True)
-    client = JiuhuarClient(token=args.token)
+    token = args.token
+    if args.login and not token:
+        import getpass
+        from jiuhuar_client import try_login
+        print("-- optional login (only needed for follower/following name lists)")
+        username = input("手机号 / phone number: ").strip()
+        password = getpass.getpass("密码（输入隐藏）/ password (hidden): ")
+        try:
+            token = try_login(username, password)
+        except RuntimeError as e:
+            print(f"login failed: {e}")
+            print("continuing WITHOUT the name lists (everything else still exports)")
+        if token:
+            with open("token.txt", "w", encoding="utf-8") as f:
+                f.write(token)
+            print("token saved to token.txt (keep it private)")
+    client = JiuhuarClient(token=token or None)
     log(f"udid (also the AES key): {client.udid}")
 
     uid = args.uid or client.user_id(args.nickname)
