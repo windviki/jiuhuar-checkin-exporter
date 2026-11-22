@@ -151,6 +151,7 @@ def build(out_dir, nickname=None):
     def _peeps(rows):
         return [{"id": u.get("oid"), "nickname": u.get("nickname"),
                  "signature": u.get("signature"),
+                 "avatar_file": _exists(img_root, f"avatars/{u.get('oid')}.jpg"),
                  "followed_at": datetime.fromtimestamp(u["timestamp"]).strftime(
                      "%Y-%m-%d %H:%M") if u.get("timestamp") else None}
                 for u in rows if u.get("oid")]

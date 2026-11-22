@@ -155,6 +155,15 @@ def step_images(client, beer_checkins, bar_checkins, details, bars, profile, out
         add(image_url(profile["background"].split("|")[0]),
             "profile/background.jpg")
 
+    # avatars of everyone in the follower/following name lists (if fetched)
+    for name in ("followers.json", "following.json"):
+        p = os.path.join(out, name)
+        if os.path.exists(p):
+            for u in json.load(open(p, encoding="utf-8")):
+                if u.get("avatar") and u.get("oid"):
+                    add(image_url(u["avatar"].split("|")[0]),
+                        f"avatars/{u['oid']}.jpg")
+
     for sub in ("checkins", "beers", "beers_lg", "avatars", "bars", "profile"):
         os.makedirs(os.path.join(img_root, sub), exist_ok=True)
 
