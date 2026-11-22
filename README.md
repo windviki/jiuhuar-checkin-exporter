@@ -17,7 +17,7 @@ Produces `output/` with:
 | `<nickname>_checkins_full.json` | Normalized full data (ratings, comments, tags, image paths & URLs) |
 | `<nickname>_checkins.csv` | Spreadsheet-friendly, opens directly in Excel (UTF-8 BOM) |
 | `checkins_beer.json` / `checkins_bar.json` | Raw API data (beer ratings & bar check-ins) |
-| `beer_details.json` / `breweries.json` | Beer & brewery details (Chinese **and English** names, ABV/IBU, style, country, descriptions) |
+| `beer_details.json` / `breweries.json` / `bars.json` | Beer & brewery details (Chinese **and English** names, ABV/IBU, style, country, descriptions) and bar info (city, address, opening hours, rating) |
 | `images/checkins/` | Your check-in photos at original resolution |
 | `images/beers_lg/` | Beer label art at original resolution (`-lg2` PNG, falls back to `-lg` webp) |
 | `images/beers/` | Beer label square thumbnails |
@@ -54,6 +54,7 @@ Key facts found by reverse engineering the Android client (v5.8.8):
 | `GET user/v2/he?uid=` | profile |
 | `GET beer/v3/{id}` | beer details, `fullName` = `中文|-|English` |
 | `GET beer/brewery/{id}` | brewery details incl. English name |
+| `GET bar/{id}` | bar details (city, address, opening hours, rating, photos) |
 
   Lists page by `lastTime` (unix **seconds**): first page `Long.MAX_VALUE`,
   then the last item's `createTime`; page size 10, a short page ends the walk.

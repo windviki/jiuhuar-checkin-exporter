@@ -45,7 +45,7 @@ def step_crawl(client, uid, out):
     return beer, bar
 
 
-def step_enrich(client, beer_checkins, out):
+def step_enrich(client, beer_checkins, bar_checkins, out):
     uniq = {}
     for c in beer_checkins:
         b = c.get("beer") or {}
@@ -75,10 +75,24 @@ def step_enrich(client, beer_checkins, out):
             time.sleep(0.25)
     log(f"fetched {len(breweries)} breweries")
     out_json(os.path.join(out, "breweries.json"), breweries)
-    return details, breweries
+
+    # bar details (city/address/opening hours/pictures) for bar check-ins
+    seen_bars, bars = set(), {}
+    for c in bar_checkins:
+        b = c.get("bar") or {}
+        if b.get("oid") and b["oid"] not in seen_bars:
+            seen_bars.add(b["oid"])
+            try:
+                bars[b["oid"]] = client.bar_detail(b["oid"])
+            except Exception as e:  # noqa: BLE001
+                log(f"  bar failed {b['oid']}: {e}")
+            time.sleep(0.25)
+    log(f"fetched {len(bars)} bars")
+    out_json(os.path.join(out, "bars.json"), bars)
+    return details, breweries, bars
 
 
-def step_images(client, beer_checkins, bar_checkins, details, profile, out):
+def step_images(client, beer_checkins, bar_checkins, details, bars, profile, out):
     img_root = os.path.join(out, "images")
     tasks = {}  # url -> relative path
 
@@ -95,7 +109,7 @@ def step_images(client, beer_checkins, bar_checkins, details, profile, out):
         if author.get("avatar"):
             add(image_url(author["avatar"].split("|")[0]),
                 f"avatars/{author.get('oid', 'unknown')}.jpg")
-        # bar logo of bar check-ins
+        # bar logo from the check-in payload
         bar = c.get("bar") or {}
         if bar.get("logo"):
             add(image_url(bar["logo"]), f"bars/{bar.get('oid', 'unknown')}.jpg")
@@ -110,6 +124,13 @@ def step_images(client, beer_checkins, bar_checkins, details, profile, out):
         if mp:
             add(beer_large_url(mp), f"beers_lg/{oid}.png")
             add(beer_thumb_url(mp), f"beers/{oid}.jpg")
+
+    # bar cover: prefer the logo, else the first bar photo (both uuid|w|h or F-keys)
+    for oid, b in (bars or {}).items():
+        if b.get("logo"):
+            add(image_url(b["logo"].split("|")[0]), f"bars/{oid}.jpg")
+        elif b.get("images"):
+            add(image_url(b["images"][0].split("|")[0]), f"bars/{oid}.jpg")
 
     # profile avatar / background
     if profile.get("avatar"):
@@ -187,12 +208,12 @@ def main():
 
     beer, bar = step_crawl(client, uid, args.out)
 
-    details = None
+    details, bars = None, None
     if not args.skip_enrich:
-        details, breweries = step_enrich(client, beer, args.out)
+        details, breweries, bars = step_enrich(client, beer, bar, args.out)
 
     if not args.skip_images:
-        step_images(client, beer, bar, details, profile, args.out)
+        step_images(client, beer, bar, details, bars, profile, args.out)
 
     # build final deliverables with the separate builder
     import build_export

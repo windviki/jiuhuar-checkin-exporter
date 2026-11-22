@@ -154,3 +154,8 @@ class JiuhuarClient:
 
     def brewery_detail(self, brewery_id: str) -> dict:
         return self.get(f"beer/brewery/{brewery_id}") or {}
+
+    def bar_detail(self, bar_id: str) -> dict:
+        """Returns the inner 'bar' object of GET bar/{id}."""
+        d = self.get(f"bar/{bar_id}") or {}
+        return d.get("bar") or {}

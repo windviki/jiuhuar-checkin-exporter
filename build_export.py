@@ -54,6 +54,7 @@ def build(out_dir, nickname=None):
     prof = load("user_profile.json", {})
     details = load("beer_details.json", {})
     breweries = load("breweries.json", {})
+    bars = load("bars.json", {})
     img_root = os.path.join(out_dir, "images")
     nickname = nickname or prof.get("nickname") or "jiuhuar_user"
 
@@ -82,6 +83,26 @@ def build(out_dir, nickname=None):
             "site_rating": d.get("rating"), "site_rating_cnt": d.get("rateCnt"),
         }
 
+    def _bar_block(raw):
+        if not raw or not raw.get("oid"):
+            return None
+        oid = raw["oid"]
+        d = bars.get(oid) or {}
+        city = " · ".join(x["name"] for x in
+                          (d.get("province"), d.get("city"), d.get("district"))
+                          if x and x.get("name"))
+        return {
+            "id": oid,
+            "name": raw.get("name") or d.get("name"),
+            "city": city or None,
+            "address": d.get("address"),
+            "open_time": d.get("openTime"),
+            "tel": d.get("tel"),
+            "rating": d.get("rating"),
+            "desc": d.get("desc") or None,
+            "logo_file": _exists(img_root, f"bars/{oid}.jpg"),
+        }
+
     def norm(c, kind):
         images = []
         for i, im in enumerate(c.get("images") or []):
@@ -99,10 +120,7 @@ def build(out_dir, nickname=None):
             "datetime": datetime.fromtimestamp(c["createTime"]).strftime("%Y-%m-%d %H:%M"),
             "timestamp": c["createTime"],
             "beer": beer_block(c.get("beer")) if kind == "beer" else None,
-            "bar": {"id": (c.get("bar") or {}).get("oid"),
-                    "name": (c.get("bar") or {}).get("name"),
-                    "logo_file": _exists(img_root, f"bars/{(c.get('bar') or {}).get('oid')}.jpg")}
-                 if (c.get("bar") or {}).get("oid") else None,
+            "bar": _bar_block(c.get("bar")) if (c.get("bar") or {}).get("oid") else None,
             "ratings": ratings,
             "stars": _stars(c.get("rating")),
             "content": c.get("content") or "",
@@ -144,11 +162,13 @@ def build(out_dir, nickname=None):
               encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(["时间", "类型", "酒款(中)", "酒款(英)", "酒厂(中)", "酒厂(英)",
-                    "国家", "风格", "ABV", "香气", "味道", "外观", "感受", "总体评分",
+                    "国家", "风格", "ABV", "酒吧", "酒吧城市", "酒吧地址",
+                    "香气", "味道", "外观", "感受", "总体评分",
                     "评论内容", "标签", "图片数", "图片文件", "点赞", "回复", "ID"])
         for i in items:
             b = i["beer"] or {}
             brw = b.get("brewery") or {}
+            bar_i = i["bar"] or {}
             w.writerow([
                 i["datetime"],
                 "酒吧点评" if i["type"] == "bar_checkin" else "酒款点评",
@@ -156,6 +176,7 @@ def build(out_dir, nickname=None):
                 brw.get("name_cn", ""), brw.get("name_en", ""),
                 b.get("country", ""), (b.get("style") or {}).get("name", ""),
                 b.get("abv", ""),
+                bar_i.get("name", ""), bar_i.get("city", ""), bar_i.get("address", ""),
                 i["ratings"].get("香气", ""), i["ratings"].get("味道", ""),
                 i["ratings"].get("外观", ""), i["ratings"].get("感受", ""),
                 i["ratings"].get("总体", ""),
@@ -183,7 +204,11 @@ def build(out_dir, nickname=None):
                                      f'{b["abv"]}%' if b.get("abv") else None] if x)
         sub_cn = (f'<div class="sub cn">{html.escape(b["name_cn"] or "")}</div>'
                   if b.get("name_en") and b.get("name_cn") else "")
-        venue = f' · 📍 {html.escape(i["bar"]["name"])}' if i["bar"] else ""
+        venue = ""
+        if i["bar"]:
+            venue = f' · 📍 {html.escape(i["bar"]["name"])}'
+            if i["bar"].get("city"):
+                venue += f'（{html.escape(i["bar"]["city"])}）'
         dims = " ".join(f'<span>{k}{v:g}</span>' for k, v in i["ratings"].items()
                         if v is not None and k != "总体")
         dims = f'<div class="dims">{dims}</div>' if dims else ""
