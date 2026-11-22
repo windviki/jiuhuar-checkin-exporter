@@ -36,9 +36,12 @@ def out_json(path, data):
 def step_crawl(client, uid, out):
     cnt = client.user_comment_cnt(uid)
     log(f"server-side counts: {json.dumps(cnt, ensure_ascii=False)}")
-    fc = client.follow_counts(uid)
-    log(f"social: {json.dumps(fc, ensure_ascii=False)} followers/following")
-    out_json(os.path.join(out, "follow_info.json"), fc)
+    try:
+        fc = client.follow_counts(uid)
+        log(f"social: {json.dumps(fc, ensure_ascii=False)} followers/following")
+        out_json(os.path.join(out, "follow_info.json"), fc)
+    except Exception as e:  # noqa: BLE001 - counts are nice-to-have
+        log(f"follow counts unavailable (skipped): {e}")
     if client.headers.get("x-auth-token"):
         try:
             fol = client.followers(uid)
@@ -46,8 +49,9 @@ def step_crawl(client, uid, out):
             log(f"follower list: {len(fol)}, following list: {len(fng)}")
             out_json(os.path.join(out, "followers.json"), fol)
             out_json(os.path.join(out, "following.json"), fng)
-        except Exception as e:  # noqa: BLE001
-            log(f"follow lists unavailable (token?): {e}")
+        except Exception as e:  # noqa: BLE001 - optional feature
+            log(f"follow lists unavailable (token rejected/expired?): {e}")
+            log("continuing without them — this feature is optional")
     beer = client.beer_checkins(uid)
     bar = client.bar_checkins(uid)
     log(f"crawled {len(beer)} beer check-ins + {len(bar)} bar check-ins "

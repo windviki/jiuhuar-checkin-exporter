@@ -94,8 +94,34 @@ python main.py --nickname X --token <auth-token>  # adds follower/following name
 python build_export.py ./output                   # rebuild JSON/CSV/HTML only
 ```
 
-Be gentle with the server: the built-in delays keep you at a few requests per
-second. It could disappear any day — export now, not later.
+## Optional: follower/following name lists (experimental)
+
+Follower/following **counts** are public and always exported. The full **name
+lists** (`follow/user/follower|following`) require a valid `x-auth-token`
+header from any logged-in account.
+
+Login reality (as of 2026):
+
+* the auth backend still **answers** (`POST signin` returns proper error
+  codes), but nothing guarantees it still validates old passwords;
+* Android login is broken, the website removed user login entirely;
+* the SMS verification gateway is dead (codes are accepted by the API but
+  never delivered);
+* reportedly the **iOS client could still log in** recently — a logged-in
+  iOS device is the most realistic source of a working token.
+
+Two optional ways to try:
+
+```bash
+# 1) experimental helper — fails gracefully, never blocks the main export
+python login.py --username 13500000000 --password 'your-password'   # -> token.txt
+python main.py --nickname NICK --token $(cat token.txt)
+
+# 2) have a logged-in iOS device? extract its token and pass it via --token
+```
+
+A wrong/expired token only means the lists are skipped:
+`main.py` logs it and finishes the rest of the export normally.
 
 ## FAQ
 
