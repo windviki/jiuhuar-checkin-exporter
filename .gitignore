@@ -1,0 +1,9 @@
+# export results contain personal data - never commit them
+output/
+*.json
+!package.json
+images/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
