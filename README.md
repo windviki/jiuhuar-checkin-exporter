@@ -97,6 +97,9 @@ python build_export.py ./output                    # 只重新生成 JSON/CSV/�
 python login.py --username 13500000000 --password '你的密码'     # 成功后生成 token.txt
 
 # 2) 带着 token 重新导出（或补导）
+#    Windows（cmd/PowerShell）：先打开 token.txt 复制里面那串字符，替换下面的 <token>
+python main.py --nickname 你的昵称 --token <token>
+#    macOS / Linux：
 python main.py --nickname 你的昵称 --token $(cat token.txt)
 ```
 
@@ -195,6 +198,10 @@ Optional, if you want the lists:
 
 ```bash
 python login.py --username 13500000000 --password 'your-password'   # -> token.txt
+
+# Windows (cmd/PowerShell): open token.txt, copy the string, paste it below
+python main.py --nickname YOUR_NICKNAME --token <token>
+# macOS / Linux:
 python main.py --nickname YOUR_NICKNAME --token $(cat token.txt)
 ```
 

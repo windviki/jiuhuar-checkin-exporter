@@ -95,7 +95,8 @@ def main():
     with open(args.save, "w", encoding="utf-8") as f:
         f.write(token)
     print(f"[OK] token acquired and saved to {args.save}")
-    print(f"     use: python main.py --nickname NICK --token $(cat {args.save})")
+    print(f"     use: python main.py --nickname NICK --token <paste the token>")
+    print(f"       (Windows: copy the string from {args.save}; macOS/Linux: --token $(cat {args.save}))")
 
 
 if __name__ == "__main__":
