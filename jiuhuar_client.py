@@ -140,7 +140,7 @@ class JiuhuarClient:
             times = [it.get("createTime") for it in batch if it.get("createTime")]
             if not times:
                 break
-            last_time = min(times)
+            last_time = int(min(times))  # guard against float serialization
             time.sleep(delay)
         return items
 
@@ -182,10 +182,12 @@ class JiuhuarClient:
                 if u.get("oid") and u["oid"] not in seen:
                     seen.add(u["oid"])
                     items.append(u)
+            # decrypted JSON may carry timestamps as floats (1.67e9); the
+            # server rejects "1675609168.0" as a long -> cast to int
             times = [u.get("timestamp") for u in batch if u.get("timestamp")]
             if len(batch) < 10 or not times:
                 break
-            last_ts = min(times)
+            last_ts = int(min(times))
             time.sleep(delay)
         return items
 
