@@ -245,6 +245,35 @@ def build(out_dir, nickname=None):
 </article>"""
 
     cards = "".join(card(i) for i in items)
+
+    # ---- social section: followers / following with avatars ----
+    def ppl_chip(u, group):
+        nick = u.get("nickname") or u.get("id", "")[:6]
+        tip = nick + (f' · 关注于 {u["followed_at"][:10]}' if u.get("followed_at") else "")
+        label = nick if len(nick) <= 6 else nick[:6] + "…"
+        av = (f'<img src="images/{u["avatar_file"]}" loading="lazy" alt="">'
+              if u.get("avatar_file")
+              else f'<span class="noav">{html.escape(nick[:1].upper())}</span>')
+        return (f'<span class="ppl" title="{html.escape(tip)}">{av}'
+                f'<i>{html.escape(label)}</i></span>')
+
+    def social_block():
+        fol, fng = doc["user"].get("followers"), doc["user"].get("following")
+        if not fol and not fng:
+            return ""
+        groups = ""
+        for label, rows in (("关注", fng or []), ("粉丝", fol or [])):
+            if rows:
+                chips = "".join(ppl_chip(u, label) for u in rows)
+                groups += (f'<div class="sgroup"><span class="glabel">{label} '
+                           f'{len(rows)}</span><div class="peeps">{chips}</div></div>')
+        if not groups:
+            return ""
+        return (f'<div class="social"><div class="shead">👥 关注与粉丝'
+                f'（关注 {doc["user"].get("following_count", len(fng or []))} · '
+                f'粉丝 {doc["user"].get("followers_count", len(fol or []))}）</div>'
+                f'{groups}</div>')
+
     gallery = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8">
@@ -270,11 +299,21 @@ def build(out_dir, nickname=None):
   .tags {{ margin-top: 6px; }}
   .tag {{ font-size: 11px; color: #b39ddb; background: #2a2540; border-radius: 10px; padding: 1px 8px; margin-right: 4px; display: inline-block; }}
   .meta {{ color: #635e7d; font-size: 11px; margin-top: 8px; }}
+  .social {{ padding: 4px 24px 18px; }}
+  .shead {{ color: #9b96b0; font-size: 14px; margin: 6px 0 10px; }}
+  .sgroup {{ margin-bottom: 10px; }}
+  .glabel {{ color: #7d7896; font-size: 12px; display: block; margin-bottom: 6px; }}
+  .peeps {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+  .ppl {{ display: inline-flex; align-items: center; gap: 6px; background: #201c2e; border-radius: 16px; padding: 3px 10px 3px 3px; font-size: 12px; color: #c9c5dd; }}
+  .ppl img {{ width: 26px; height: 26px; border-radius: 50%; object-fit: cover; display: block; }}
+  .noav {{ width: 26px; height: 26px; border-radius: 50%; background: #3a3355; color: #b39ddb; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-style: normal; }}
+  .ppl i {{ font-style: normal; max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
 </style>
 </head>
 <body>
 <h1>🍺 酒花儿数据导出 — {html.escape(nickname)}</h1>
 <div class="summary">{stats['total']} 条 checkin · {stats['beer_checkins']} 酒款 + {stats['bar_checkins']} 酒吧 · {stats['unique_beers']} 款酒 · {stats['with_comment']} 条评论 · {stats['images_total']} 张图片 · {(stats['first'] or '')[:10]} ~ {(stats['last'] or '')[:10]}</div>
+{social_block()}
 <div class="grid">{cards}
 </div>
 </body>

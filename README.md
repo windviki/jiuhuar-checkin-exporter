@@ -18,7 +18,7 @@ Produces `output/` with:
 
 | File | Content |
 |---|---|
-| `index.html` | Dark-theme browsable gallery of all your check-ins (untappd-style) |
+| `index.html` | Dark-theme browsable gallery: social section (followers/following avatars) + all check-in cards (untappd-style) |
 | `<nickname>_checkins_full.json` | Normalized full data (ratings, comments, tags, image paths & URLs) |
 | `<nickname>_checkins.csv` | Spreadsheet-friendly, opens directly in Excel (UTF-8 BOM) |
 | `checkins_beer.json` / `checkins_bar.json` | Raw API data (beer ratings & bar check-ins) |
@@ -26,9 +26,9 @@ Produces `output/` with:
 | `images/checkins/` | Your check-in photos at original resolution |
 | `images/beers_lg/` | Beer label art at original resolution (`-lg2` PNG, falls back to `-lg` webp) |
 | `images/beers/` | Beer label square thumbnails |
-| `images/avatars/` · `images/bars/` · `images/profile/` | Comment-author avatars, bar logos, your avatar & profile background |
+| `images/avatars/` · `images/bars/` · `images/profile/` | Avatars of comment authors **and everyone in your follow lists**, bar logos, your avatar & profile background |
 | `follow_info.json` | Your follower/following **counts** (public) |
-| `followers.json` / `following.json` | Full name lists with follow dates — only with `--token` (any logged-in account) |
+| `followers.json` / `following.json` | Full name lists with follow dates + avatar keys — only with `--token` (any logged-in account) |
 | `run_log.txt` | What the run did |
 
 > **Privacy**: the `output/` directory contains your personal history (and
